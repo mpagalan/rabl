@@ -1,3 +1,5 @@
+require 'multi_json'
+
 module Rabl
   class Engine
     include Rabl::Helpers
@@ -7,6 +9,10 @@ module Rabl
     def initialize(source, options={})
       @_source = source
       @_options = options
+
+      if Rabl.configuration.json_engine
+        MultiJson.engine = Rabl.configuration.json_engine
+      end
     end
 
     # Renders the representation based on source, object, scope and locals
@@ -15,7 +21,7 @@ module Rabl
       @_locals, @_scope = locals, scope
       self.copy_instance_variables_from(@_scope, [:@assigns, :@helpers])
       @_options[:scope] = @_scope
-      @_options[:format] ||= default_format
+      @_options[:format] ||= self.request_format
       @_data = locals[:object] || self.default_object
       instance_eval(@_source) if @_source.present?
       instance_eval(&block) if block_given?
@@ -41,7 +47,7 @@ module Rabl
       include_root = Rabl.configuration.include_json_root
       options = options.reverse_merge(:root => include_root, :child_root => include_root)
       result = @_collection_name ? { @_collection_name => to_hash(options) } : to_hash(options)
-      format_json(result.to_json)
+      format_json MultiJson.encode(result)
     end
 
     # Returns an xml representation of the data object
@@ -49,7 +55,8 @@ module Rabl
     def to_xml(options={})
       include_root = Rabl.configuration.include_xml_root
       options = options.reverse_merge(:root => include_root, :child_root => include_root)
-      to_hash(options).to_xml({:root => data_name(@_data)}.merge(Rabl.configuration.default_xml_options))
+      xml_options = Rabl.configuration.default_xml_options.merge(:root => data_name(@_data))
+      to_hash(options).to_xml(xml_options)
     end
 
     # Sets the object to be used as the data source for this template
@@ -130,13 +137,13 @@ module Rabl
     end
 
     # Returns a guess at the format in this scope
-    # default_format => "xml"
-    def default_format
+    # request_format => "xml"
+    def request_format
       format = self.request_params.has_key?(:format) ? @_scope.params[:format] : nil
       if request = @_scope.respond_to?(:request) && @_scope.request
         format ||= request.format.to_sym.to_s if request.respond_to?(:format)
       end
-      format || "json"
+      format && self.respond_to?("to_#{format}") ? format : "json"
     end
 
     # Returns the request parameters if available in the scope
@@ -160,6 +167,11 @@ module Rabl
     # Supports calling helpers defined for the template scope using method_missing hook
     def method_missing(name, *args, &block)
       @_scope.respond_to?(name) ? @_scope.send(name, *args, &block) : super
+    end
+
+    def copy_instance_variables_from(object, exclude = []) #:nodoc:
+      vars = object.instance_variables.map(&:to_s) - exclude.map(&:to_s)
+      vars.each { |name| instance_variable_set(name, object.instance_variable_get(name)) }
     end
   end
 end

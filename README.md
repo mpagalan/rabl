@@ -30,7 +30,7 @@ gem 'rabl'
 
 and run `bundle install` to install the dependency.
 
-If you are using **Rails 2.X, Rails 3 or Padrino**, RABL works without configuration.
+If you are using **Rails 2.X, Rails 3, Rails 3.X or Padrino**, RABL works without configuration.
 
 With Sinatra, or any other tilt-based framework, simply register:
 
@@ -86,13 +86,24 @@ RABL is intended to require little to no configuration to get working. This is t
 # config/initializers/rabl_init.rb
 Rabl.configure do |config|
   # Commented as these are the defaults
+  # config.json_engine = nil # Any multi\_json engines
   # config.include_json_root = true
   # config.include_xml_root  = false
   # config.enable_json_callbacks = false
+  # config.xml_options = { :dasherize  => true, :skip_types => false }
 end
 ```
 
 Each option specifies behavior related to RABL's output. If `include_json_root` is disabled that removes the root node for each child in the output, and `enable_json_callbacks` enables support for 'jsonp' style callback output if the incoming request has a 'callback' parameter.
+
+Note that the `json_engine` option uses the [multi_json](http://intridea.com/2010/6/14/multi-json-the-swappable-json-handler) intelligent engine defaults so in most cases you **don't need to configure this** directly. If you wish to use yajl as the primary JSON encoding engine simply add that to your Gemfile:
+
+```ruby
+# Gemfile
+gem 'yajl-ruby', :require => "yajl"
+```
+
+and RABL will automatically start using that engine for encoding your JSON responses!
 
 ## Usage ##
 
@@ -227,23 +238,24 @@ You can use custom "code" nodes to create flexible representations of a value ut
 
 ### Partials ###
 
-Often you need to access sub-objects in order to construct your own custom nodes for more complex associations. You can get access to the rabl representation of another object with:
+Often you need to access other data objects in order to construct custom nodes in more complex associations. You can get access to the rabl representation of another data object by rendering a RABL partial:
 
 ```ruby
 code :location do
-  { :city => @city, :address => partial("web/users/address", :object => @address) }
+  { :city => @city, :address => partial("users/address", :object => @address) }
 end
 ```
 
-or an object associated to the parent model:
+or event access an object associated with the parent model:
 
 ```ruby
 code :location do |m|
-  { :city => m.city, :address => partial("web/users/address", :object => m.address) }
+  { :city => m.city, :address => partial("users/address", :object => m.address) }
 end
 ```
 
-You can use this method to construct arbitrarily complex nodes for your APIs.
+You can use this method to construct arbitrarily complex nodes for your APIs. Note that you need to have RABL templates defined
+for each of the objects you wish to construct representations for in this manner.
 
 ### Inheritance ###
 
@@ -323,6 +335,9 @@ Thanks to [Miso](http://gomiso.com) for allowing me to create this for our appli
 * [Arthur Chiu](https://github.com/achiu) - Core Maintainer, Riot Testing Guru
 * [Tim Lee](https://github.com/timothy1ee) - RABL is an awesome name and was chosen by the Miso CTO.
 * [Rick Thomas](https://github.com/rickthomasjr) - Added options passing for extends and Sinatra testing
+* [Marjun](https://github.com/mpagalan) - Added xml option configurations
+* [Chris Kimpton](https://github.com/kimptoc) - Helping with documentation and wiki
+* [Sasha Koss](https://github.com/kossnocorp) - Added multi_json support
 
 More to come hopefully! Please fork and contribute, any help is appreciated!
 

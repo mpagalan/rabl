@@ -4,15 +4,16 @@ module Rabl
     attr_accessor :include_json_root
     attr_accessor :include_xml_root
     attr_accessor :enable_json_callbacks
+    attr_accessor :json_engine
     attr_writer   :xml_options
 
-    DEFAULT_XML_OPTIONS = { :dasherize  => true,
-                            :skip_types => false }
+    DEFAULT_XML_OPTIONS = { :dasherize  => true, :skip_types => false }
 
     def initialize
       @include_json_root     = true
       @include_xml_root      = false
       @enable_json_callbacks = false
+      @json_engine           = nil
       @xml_options           = {}
     end
 
@@ -25,12 +26,7 @@ module Rabl
 
     # Returns merged default and inputted xml options
     def default_xml_options
-      return @default_xml_options if @default_xml_options
-      @default_xml_options = if @xml_options.is_a?(Hash)
-        DEFAULT_XML_OPTIONS.merge(@xml_options.reject {|k,v| !DEFAULT_XML_OPTIONS.keys.include?(k)})
-      else
-        DEFAULT_XML_OPTIONS
-      end
+      @_default_xml_options ||= @xml_options.reverse_merge(DEFAULT_XML_OPTIONS)
     end
   end
 end
